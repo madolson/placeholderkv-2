@@ -5490,7 +5490,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
             "# Server\r\n"
             "redis_version:%s\r\n"
             "server_name:%s\r\n",
-            "server_version:%s\r\n",
+            "valkey_version:%s\r\n",
             "redis_git_sha1:%s\r\n"
             "redis_git_dirty:%i\r\n"
             "redis_build_id:%s\r\n"
@@ -5516,7 +5516,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
             "io_threads_active:%i\r\n",
             REDIS_VERSION,
             SERVER_NAME,
-            SERVER_VERSION,
+            VALKEY_VERSION,
             redisGitSHA1(),
             strtol(redisGitDirty(),NULL,10) > 0,
             redisBuildIdString(),
@@ -6381,7 +6381,7 @@ void daemonize(void) {
 
 void version(void) {
     printf("Server v=%s sha=%s:%d malloc=%s bits=%d build=%llx\n",
-        SERVER_VERSION,
+        VALKEY_VERSION,
         redisGitSHA1(),
         atoi(redisGitDirty()) > 0,
         ZMALLOC_LIB,
@@ -6435,9 +6435,15 @@ void redisAsciiArt(void) {
         );
     } else {
         snprintf(buf,1024*16,ascii_logo,
+<<<<<<< HEAD
             SERVER_VERSION,
             redisGitSHA1(),
             strtol(redisGitDirty(),NULL,10) > 0,
+=======
+            VALKEY_VERSION,
+            serverGitSHA1(),
+            strtol(serverGitDirty(),NULL,10) > 0,
+>>>>>>> bc28fb4ac... Update Server version to valkey version (#232)
             (sizeof(long) == 8) ? "64" : "32",
             mode, server.port ? server.port : server.tls_port,
             (long) getpid()
@@ -7286,7 +7292,7 @@ int main(int argc, char **argv) {
 
     serverLog(LL_NOTICE, "oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo");
     serverLog(LL_NOTICE, SERVER_NAME " version=%s, bits=%d, commit=%s, modified=%d, pid=%d, just started",
-            SERVER_VERSION,
+            VALKEY_VERSION,
             (sizeof(long) == 8) ? 64 : 32,
             redisGitSHA1(),
             strtol(redisGitDirty(),NULL,10) > 0,
