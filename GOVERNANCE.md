@@ -12,8 +12,8 @@ The TSC will be responsible for oversight of all technical, project, approval, a
 The TSC members are listed in the MAINTAINERS.md file in the main Valkey repository.
 New maintainers (and accordingly, TSC members) may be added or removed by no less than 2/3 affirmative vote of the current TSC.
 The TSC will appoint a Chair responsible for organizing TSC meetings.
-If the TSC Chair is removed from the Committee (or the Chair steps down from that role), it is the responsibility of the TSC to appoint a new Chair.
-The TSC can choose to amend this governance document by no less than a 2/3 affirmative vote.
+If the TSC Chair is removed from the TSC (or the Chair steps down from that role), it is the responsibility of the TSC to appoint a new Chair.
+The TSC can amend this governance document by no less than a 2/3 affirmative vote.
 
 The TSC may, at its discretion, add or remove members who are not maintainers of the main Valkey repository.
 The TSC may, at its discretion, add or remove maintainers from supporting repositories within the Valkey project.
@@ -29,7 +29,7 @@ If consensus cannot be reached, the TSC will make the decision by a vote.
 The TSC Chair will call a vote with reasonable notice to the TSC, setting out a discussion period and a separate voting period.
 Any discussion may be conducted in person or electronically by text, voice, or video.
 The discussion will be open to the public, with the notable exception of discussions involving embargoed security issues or the addition or removal of maintainers, which will be private.
-In any vote, each voting maintainer will have one vote. 
+In any vote, each voting maintainer will have one vote.
 Except as specifically noted elsewhere in this document, decisions by vote require a simple majority vote of all voting members.
 
 ## Termination of Membership
@@ -43,7 +43,7 @@ A maintainer’s access (and accordingly, their position on the TSC) will be rem
 ## Technical direction for supporting projects
 
 The TSC may delegate decision making for supporting projects within the Valkey project to a Supporting Steering Committees (SSC).
-An SSC will be determined by the MAINTAINERS.md file in the repository for the supporting project.
+An SSC will be comprised by the individuals in the MAINTAINERS.md file in the repository for the supporting project.
 The initial membership of the SSC will be determined by the TSC.
 Once created, the SSC will take over responsibility for the technical decision making and maintenance of their supporting project.
 The SSC will be required to adopt its own governance document, outside of the requirements set forth in this document.
