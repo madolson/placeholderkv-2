@@ -4,6 +4,10 @@ public discussion groups, you agree to release your code under the terms
 of the Valkey license that you can find in the COPYING file included in the Valkey
 source distribution.
 
+# Project governance
+
+The Valkey project is led by a Technical Steering Commitee, whose responsibilities are laid out in [GOVERNANCE.md](GOVERNANCE.md).
+
 # IMPORTANT: HOW TO USE VALKEY GITHUB ISSUES
 
 GitHub issues SHOULD ONLY BE USED to report bugs and for DETAILED feature
