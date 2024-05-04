@@ -574,7 +574,7 @@ jobs:
         compiler: [ gcc, clang ]
     env:
       CC: ${{ matrix.compiler }}
-      AR: ${{ matrix.compiler }}-ar
+      AR: if (${{ matrix.compiler }} == 'gcc') { echo 'gcc-ar'; } else { echo 'llvm-ar'; }
     steps:
       - name: prep
         if: github.event_name == 'workflow_dispatch'
