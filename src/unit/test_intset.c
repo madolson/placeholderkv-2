@@ -3,6 +3,10 @@
 
 #include "../intset.c"
 #include "test_help.h"
+#if defined(__GNUC__) && __GNUC__ >= 7
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Werror=array-bounds"
+#endif
 
 static long long usec(void) {
     struct timeval tv;
@@ -226,3 +230,7 @@ int test_intsetStressAddDelete(int argc, char **argv, int flags) {
 
     return 0;
 }
+
+#if defined(__GNUC__) && __GNUC__ >= 12
+#pragma GCC diagnostic pop
+#endif
