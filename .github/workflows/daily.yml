@@ -107,7 +107,7 @@ jobs:
       run: |
         apt-get update && apt-get install -y make gcc-13
         update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-        make all-with-unit-tests CC=gcc OPTIMIZATION=-O2 SERVER_CFLAGS='-Werror -DSERVER_TEST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3'
+        make all-with-unit-tests CC=gcc OPTIMIZATION=-O0 SERVER_CFLAGS='-Werror -DSERVER_TEST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3'
     - name: testprep
       run: apt-get install -y tcl8.6 tclx procps
     - name: new unit tests
@@ -589,7 +589,7 @@ jobs:
           repository: ${{ env.GITHUB_REPOSITORY }}
           ref: ${{ env.GITHUB_HEAD_REF }}
       - name: make
-        run: make all-with-unit-tests OPTIMIZATION=-O2 SANITIZER=address SERVER_CFLAGS='-DSERVER_TEST -Werror -DDEBUG_ASSERTIONS'
+        run: make all-with-unit-tests OPTIMIZATION=-O0 SANITIZER=address SERVER_CFLAGS='-DSERVER_TEST -Werror -DDEBUG_ASSERTIONS'
       - name: testprep
         # Work around ASAN issue, see https://github.com/google/sanitizers/issues/1716
         run: |
