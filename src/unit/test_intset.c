@@ -135,7 +135,6 @@ int test_intsetUpgradeFromint16Toint64(int argc, char **argv, int flags) {
     UNUSED(flags);
 
     intset *is = intsetNew();
-    is = intsetNew();
     is = intsetAdd(is,32,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT16);
     is = intsetAdd(is,4294967295,NULL);
