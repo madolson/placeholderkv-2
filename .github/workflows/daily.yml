@@ -594,9 +594,7 @@ jobs:
           repository: ${{ env.GITHUB_REPOSITORY }}
           ref: ${{ env.GITHUB_HEAD_REF }}
       - name: make
-        run: |
-          if (${{ matrix.compiler }} == 'gcc') { echo 'gcc-ar'; } else { echo 'llvm-ar'; }
-          make all-with-unit-tests SANITIZER=address SERVER_CFLAGS='-DSERVER_TEST -Werror -DDEBUG_ASSERTIONS'
+        run: make all-with-unit-tests SANITIZER=address SERVER_CFLAGS='-DSERVER_TEST -Werror -DDEBUG_ASSERTIONS'
       - name: testprep
         # Work around ASAN issue, see https://github.com/google/sanitizers/issues/1716
         run: |
