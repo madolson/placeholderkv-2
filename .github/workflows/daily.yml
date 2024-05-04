@@ -571,10 +571,14 @@ jobs:
     timeout-minutes: 14400
     strategy:
       matrix:
-        compiler: [ gcc, clang ]
+        compiler:
+          - cc: gcc
+            ar: gcc-ar
+          - cc: clang
+            ar: llvm-ar
     env:
-      CC: ${{ matrix.compiler }}
-      AR: if (${{ matrix.compiler }} == 'gcc') { echo 'gcc-ar'; } else { echo 'llvm-ar'; }
+      CC: ${{ matrix.compiler.cc }}
+      AR: ${{ matrix.compiler.ar }}
     steps:
       - name: prep
         if: github.event_name == 'workflow_dispatch'
@@ -590,7 +594,9 @@ jobs:
           repository: ${{ env.GITHUB_REPOSITORY }}
           ref: ${{ env.GITHUB_HEAD_REF }}
       - name: make
-        run: make all-with-unit-tests SANITIZER=address SERVER_CFLAGS='-DSERVER_TEST -Werror -DDEBUG_ASSERTIONS'
+        run: |
+          if (${{ matrix.compiler }} == 'gcc') { echo 'gcc-ar'; } else { echo 'llvm-ar'; }
+          make all-with-unit-tests SANITIZER=address SERVER_CFLAGS='-DSERVER_TEST -Werror -DDEBUG_ASSERTIONS'
       - name: testprep
         # Work around ASAN issue, see https://github.com/google/sanitizers/issues/1716
         run: |
