@@ -107,7 +107,7 @@ jobs:
       run: |
         apt-get update && apt-get install -y make gcc-13
         update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-        make all-with-unit-tests CC=gcc SERVER_CFLAGS='-Werror -DSERVER_TEST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3'
+        make all-with-unit-tests AR=gcc-ar CC=gcc SERVER_CFLAGS='-Werror -DSERVER_TEST -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3'
     - name: testprep
       run: apt-get install -y tcl8.6 tclx procps
     - name: new unit tests
@@ -574,6 +574,7 @@ jobs:
         compiler: [ gcc, clang ]
     env:
       CC: ${{ matrix.compiler }}
+      AR: ${{ matrix.compiler }}-ar
     steps:
       - name: prep
         if: github.event_name == 'workflow_dispatch'
