@@ -6,10 +6,10 @@
 #if defined(__GNUC__) && __GNUC__ >= 7
 /* Several functions in this file get inlined in such a way that fortify warns there might
  * be an out of bounds memory access depending on the intset encoding, but they aren't actually
- * reachable. An alternative future strategy could be to avoid the direct importing of
- * intset.c, but then we would also need to expose a bunch of low level functions for tests. */
+ * reachable because we check the encoding. There are other strategies to fix this, but they
+ * all require other hacks to prevent the inlining. So for now, just omit the check. */
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Werror=array-bounds="
+#pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
 
 static long long usec(void) {
