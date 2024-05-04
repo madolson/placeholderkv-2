@@ -72,7 +72,7 @@ int test_intsetBasicAdding(int argc, char **argv, int flags) {
 
     intset *is = intsetNew();
     uint8_t success;
-    is = intsetAdd(is,5,&success); TEST_ASSERT(success);
+    is = intsetAdd(is,rand()%0x800,&success); TEST_ASSERT(success);
     is = intsetAdd(is,6,&success); TEST_ASSERT(success);
     is = intsetAdd(is,4,&success); TEST_ASSERT(success);
     is = intsetAdd(is,4,&success); TEST_ASSERT(!success);
@@ -107,7 +107,7 @@ int test_intsetUpgradeFromint16Toint32(int argc, char **argv, int flags) {
     UNUSED(flags);
 
     intset *is = intsetNew();
-    is = intsetAdd(is,32,NULL);
+    is = intsetAdd(is,rand()%0x800,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT16);
     is = intsetAdd(is,65535,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT32);
@@ -117,7 +117,7 @@ int test_intsetUpgradeFromint16Toint32(int argc, char **argv, int flags) {
     zfree(is);
 
     is = intsetNew();
-    is = intsetAdd(is,32,NULL);
+    is = intsetAdd(is,rand()%0x800,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT16);
     is = intsetAdd(is,-65535,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT32);
@@ -135,7 +135,7 @@ int test_intsetUpgradeFromint16Toint64(int argc, char **argv, int flags) {
     UNUSED(flags);
 
     intset *is = intsetNew();
-    is = intsetAdd(is,32,NULL);
+    is = intsetAdd(is,rand()%0x800,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT16);
     is = intsetAdd(is,4294967295,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT64);
@@ -145,7 +145,7 @@ int test_intsetUpgradeFromint16Toint64(int argc, char **argv, int flags) {
     zfree(is);
 
     is = intsetNew();
-    is = intsetAdd(is,32,NULL);
+    is = intsetAdd(is,rand()%0x800,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT16);
     is = intsetAdd(is,-4294967295,NULL);
     TEST_ASSERT(intrev32ifbe(is->encoding) == INTSET_ENC_INT64);
@@ -198,7 +198,7 @@ int test_intsetStressLookups(int argc, char **argv, int flags) {
 
     start = usec();
     for (i = 0; i < num; i++) intsetSearch(is,rand() % ((1<<bits)-1),NULL);
-    TEST_PRINT_INFO("%ld lookups, %ld element set, %lldusec\n",
+        TEST_PRINT_INFO("%ld lookups, %ld element set, %lldusec",
             num,size,usec()-start);
     zfree(is);
 
