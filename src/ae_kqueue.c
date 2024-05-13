@@ -33,14 +33,16 @@
 #include <sys/event.h>
 #include <sys/time.h>
 
+#define MAX_QUEUED_EVENTS 1024
+
 typedef struct aeApiState {
     int kqfd;
     struct kevent *events;
 
     /* changes is used to buffer incoming events that will be
      * registered in bulk via kevent(2). */
-    struct kevent changes[1024];
-    unsigned int nch;
+    struct kevent changes[MAX_QUEUED_EVENTS];
+    unsigned int num_changes;
 
     /* Events mask for merge read and write event.
      * To reduce memory consumption, we use 2 bits to store the mask
@@ -51,7 +53,6 @@ typedef struct aeApiState {
 #define EVENT_MASK_MALLOC_SIZE(sz) (((sz) + 3) / 4)
 #define EVENT_MASK_OFFSET(fd) ((fd) % 4 * 2)
 #define EVENT_MASK_ENCODE(fd, mask) (((mask) & 0x3) << EVENT_MASK_OFFSET(fd))
-#define EVENT_ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 static inline int getEventMask(const char *eventsMask, int fd) {
     return (eventsMask[fd/4] >> EVENT_MASK_OFFSET(fd)) & 0x3;
@@ -81,7 +82,7 @@ static int aeApiCreate(aeEventLoop *eventLoop) {
         return -1;
     }
     anetCloexec(state->kqfd);
-    state->nch = 0;
+    state->num_changes = 0;
     state->eventsMask = zmalloc(EVENT_MASK_MALLOC_SIZE(eventLoop->setsize));
     memset(state->eventsMask, 0, EVENT_MASK_MALLOC_SIZE(eventLoop->setsize));
     eventLoop->apidata = state;
@@ -111,23 +112,35 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     /* Instead of registering events to kqueue one by one, we buffer events and
      * register them at once along with retrieving pending events in aeApiPoll. */
     if (mask & AE_READABLE) {
-        EV_SET(state->changes + state->nch, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        EV_SET(state->changes + state->num_changes, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
         /* The current changelist is full, register it to kqueue now and
-         * then rewind it to make rooms for follow-up events. */
-        if (++state->nch == EVENT_ARRAY_SIZE(state->changes)) {
-            if (kevent(state->kqfd, state->changes, state->nch, NULL, 0, NULL))
+         * then rewind it to make room for follow-up events. */
+        if (++state->num_changes == MAX_QUEUED_EVENTS) {
+            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL)) {
+                /* An error occurs while processing an element of the changelist,
+                 * this is unexpected and indicates somewhere went wrong.
+                 * We return -1 for this situation instead of panicking for the
+                 * consistency with other AE backends. */
+                state->num_changes = 0;
                 return -1;
-            state->nch = 0; /* rewind the changelist. */
+            }
+            state->num_changes = 0; /* rewind the changelist. */
         }
     }
     if (mask & AE_WRITABLE) {
-        EV_SET(state->changes + state->nch, fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+        EV_SET(state->changes + state->num_changes, fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
         /* The current changelist is full, register it to kqueue now and
-         * then rewind it to make rooms for follow-up events. */
-        if (++state->nch == EVENT_ARRAY_SIZE(state->changes)) {
-            if (kevent(state->kqfd, state->changes, state->nch, NULL, 0, NULL))
+         * then rewind it to make room for follow-up events. */
+        if (++state->num_changes == MAX_QUEUED_EVENTS) {
+            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL)) {
+                /* An error occurs while processing an element of the changelist,
+                 * this is unexpected and indicates somewhere went wrong.
+                 * We return -1 for this situation instead of panicking for the
+                 * consistency with other AE backends. */
+                state->num_changes = 0;
                 return -1;
-            state->nch = 0; /* rewind the changelist. */
+            }
+            state->num_changes = 0; /* rewind the changelist. */
         }
     }
     return 0;
@@ -145,23 +158,23 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
     /* Instead of applying events to kqueue one by one, we buffer events
      * and apply them at once. */
     if (delmask & AE_READABLE) {
-        EV_SET(state->changes + state->nch, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        EV_SET(state->changes + state->num_changes, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
         /* The current changelist is full, apply it to kqueue now and
-         * then rewind it to make rooms for follow-up events. */
-        if (++state->nch == EVENT_ARRAY_SIZE(state->changes)) {
-            if (kevent(state->kqfd, state->changes, state->nch, NULL, 0, NULL))
+         * then rewind it to make room for follow-up events. */
+        if (++state->num_changes == MAX_QUEUED_EVENTS) {
+            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
                 panic("aeApiDelEvent: kevent, %s", strerror(errno));
-            state->nch = 0; /* rewind the changelist. */
+            state->num_changes = 0; /* rewind the changelist. */
         }
     }
     if (delmask & AE_WRITABLE) {
-        EV_SET(state->changes + state->nch, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+        EV_SET(state->changes + state->num_changes, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         /* The current changelist is full, apply it to kqueue now and
-         * then rewind it to make rooms for follow-up events. */
-        if (++state->nch == EVENT_ARRAY_SIZE(state->changes)) {
-            if (kevent(state->kqfd, state->changes, state->nch, NULL, 0, NULL))
+         * then rewind it to make room for follow-up events. */
+        if (++state->num_changes == MAX_QUEUED_EVENTS) {
+            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
                 panic("aeApiDelEvent: kevent, %s", strerror(errno));
-            state->nch = 0; /* rewind the changelist. */
+            state->num_changes = 0; /* rewind the changelist. */
         }
     }
 
@@ -169,10 +182,10 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
      * because the caller often closed the file descriptor right after they called
      * aeDeleteFileEvent(), and kevent(2) would report ENOENT or EBADF if the changelist
      * contained any closed file descriptors. */
-    if (state->nch > 0) {
-        if (kevent(state->kqfd, state->changes, state->nch, NULL, 0, NULL))
+    if (state->num_changes > 0) {
+        if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
             panic("aeApiDelEvent: kevent, %s", strerror(errno));
-        state->nch = 0; /* rewind the changelist. */
+        state->num_changes = 0; /* rewind the changelist. */
     }
 }
 
@@ -186,8 +199,8 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
         ts.tv_nsec = tvp->tv_usec * 1000;
         timeout = &ts;
     }
-    retval = kevent(state->kqfd, state->changes, state->nch, state->events, eventLoop->setsize, timeout);
-    state->nch = 0;
+    retval = kevent(state->kqfd, state->changes, state->num_changes, state->events, eventLoop->setsize, timeout);
+    state->num_changes = 0;
 
     if (retval > 0) {
         int j;
