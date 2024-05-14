@@ -116,14 +116,12 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
         /* The current changelist is full, register it to kqueue now and
          * then rewind it to make room for follow-up events. */
         if (++state->num_changes == MAX_QUEUED_EVENTS) {
-            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL)) {
+            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
                 /* An error occurs while processing an element of the changelist,
                  * this is unexpected and indicates somewhere went wrong.
-                 * We return -1 for this situation instead of panicking for the
-                 * consistency with other AE backends. */
-                state->num_changes = 0;
-                return -1;
-            }
+                 * We panic for this situation directly because we won't be unable to
+                 * learn about this failure later. */
+                panic("aeApiAddEvent: kevent, %s", strerror(errno));
             state->num_changes = 0; /* rewind the changelist. */
         }
     }
@@ -132,14 +130,12 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
         /* The current changelist is full, register it to kqueue now and
          * then rewind it to make room for follow-up events. */
         if (++state->num_changes == MAX_QUEUED_EVENTS) {
-            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL)) {
+            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
                 /* An error occurs while processing an element of the changelist,
                  * this is unexpected and indicates somewhere went wrong.
-                 * We return -1 for this situation instead of panicking for the
-                 * consistency with other AE backends. */
-                state->num_changes = 0;
-                return -1;
-            }
+                 * We panic for this situation directly because we won't be unable to
+                 * learn about this failure later. */
+                panic("aeApiAddEvent: kevent, %s", strerror(errno));
             state->num_changes = 0; /* rewind the changelist. */
         }
     }
