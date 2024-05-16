@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       # any PR to a release branch.
-      - '[0-9].[0-9]'
+      - 'unstable'
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
@@ -1075,7 +1075,7 @@ jobs:
 
   notify-about-job-results:
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' && github.repository == 'valkey-io/valkey'
+    if: github.event_name != 'workflow_dispatch' && github.repository == 'madolson/valkey'
     needs: [test-ubuntu-jemalloc, test-ubuntu-jemalloc-fortify, test-ubuntu-libc-malloc, test-ubuntu-no-malloc-usable-size, test-ubuntu-32bit, test-ubuntu-tls, test-ubuntu-tls-no-tls, test-ubuntu-io-threads, test-ubuntu-reclaim-cache, test-valgrind-test, test-valgrind-misc, test-valgrind-no-malloc-usable-size-test, test-valgrind-no-malloc-usable-size-misc, test-sanitizer-address, test-sanitizer-undefined, test-centos7-jemalloc, test-centos7-tls-module, test-centos7-tls-module-no-tls, test-macos-latest, test-macos-latest-sentinel, test-macos-latest-cluster, build-macos, test-freebsd, test-alpine-jemalloc, test-alpine-libc-malloc, reply-schemas-validator]
     steps:
       - name: Collect job status
