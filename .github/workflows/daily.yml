@@ -1073,3 +1073,28 @@ jobs:
     - name: validator
       run: ./utils/req-res-log-validator.py --verbose --fail-missing-reply-schemas ${{ (!contains(github.event.inputs.skiptests, 'valkey') && !contains(github.event.inputs.skiptests, 'module') && !contains(github.event.inputs.sentinel, 'valkey') && !contains(github.event.inputs.skiptests, 'cluster')) && github.event.inputs.test_args == '' && github.event.inputs.cluster_test_args == '' && '--fail-commands-not-all-hit' || '' }}
 
+ Notify about job results:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' && github.repository == 'valkey-io/valkey'
+    needs: [test-ubuntu-jemalloc, test-ubuntu-jemalloc-fortify, test-ubuntu-libc-malloc, test-ubuntu-no-malloc-usable-size, test-ubuntu-32bit, test-ubuntu-tls, test-ubuntu-tls-no-tls, test-ubuntu-io-threads, test-ubuntu-reclaim-cache, test-valgrind-test, test-valgrind-misc, test-valgrind-no-malloc-usable-size-test, test-valgrind-no-malloc-usable-size-misc, test-sanitizer-address, test-sanitizer-undefined, test-centos7-jemalloc, test-centos7-tls-module, test-centos7-tls-module-no-tls, test-macos-latest, test-macos-latest-sentinel, test-macos-latest-cluster, build-macos, test-freebsd, test-alpine-jemalloc, test-alpine-libc-malloc, reply-schemas-validator]
+    steps:
+      - name: Collect job status
+        run: |
+          failed_jobs=$(jq -r '.jobs[] | select(.conclusion == "failure") | .name' "$GITHUB_WORKFLOW" | paste -sd "," -)
+          if [ -z "$failed_jobs" ]; then
+            echo "STATUS=success" >> $GITHUB_ENV
+            exit 0
+          else
+            echo "FAILED_JOBS=$failed_jobs" >> $GITHUB_ENV
+            echo "STATUS=failure" >> GITHUB_ENV
+            exit 1
+          fi
+      - name: Notify 
+        uses: ravsamhq/notify-slack-action@v2
+        with:
+          status: ${{ vars.STATUS }}
+          notify_when: "failure"
+          notification_title: " ${{ vars.failure }}"
+          message_format: ":fire:"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
