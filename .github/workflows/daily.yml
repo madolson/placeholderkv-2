@@ -627,7 +627,7 @@ jobs:
   test-sanitizer-undefined:
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'workflow_dispatch' || (github.event_name != 'workflow_dispatch' && github.repository == 'valkey-io/valkey')) &&
+      (github.event_name == 'workflow_dispatch' || (github.event_name != 'workflow_dispatch')) &&
       !contains(github.event.inputs.skipjobs, 'sanitizer')
     timeout-minutes: 14400
     strategy:
