@@ -11,7 +11,7 @@ on:
 jobs:
   failed-daily-check:
     runs-on: ubuntu-latest
-    if: (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out') && github.repository == 'valkey-io/valkey'
+    if: (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out') && github.repository == 'madolson/valkey'
     steps:
       - uses: ravsamhq/notify-slack-action@v2
         with:
