@@ -1086,6 +1086,7 @@ jobs:
           JOBS=($(echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,'))
           echo "$NEEDS_JSON" | jq 'keys'
           echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,'
+          echo ($(echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,'))
           echo $JOBS
           for JOB in $JOBS; do
             JOB_RESULT=$(echo "$NEEDS_JSON" | jq ".[$JOB][\"result\"]" | tr -d '"')
@@ -1105,10 +1106,10 @@ jobs:
       - name: Notify 
         uses: ravsamhq/notify-slack-action@v2
         with:
-          status: ${{ vars.STATUS }}
+          status: ${{ env.STATUS }}
 #          notify_when: "failure"
           notification_title: " Daily test run <${{github.server_url}}/${{github.repository}}/actions/runs/${{github.event.workflow_run.id}}|Failure>"
-          footer: "Tests failed: ${{ vars.FAILED_JOBS }}"
-          message_format: ":fire: Failure in "
+          footer: "Maybe try a little harder next time?"
+          message_format: ":fire: Tests failed: ${{ env.FAILED_JOBS }}"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK_URL }}
