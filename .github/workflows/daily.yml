@@ -1097,6 +1097,7 @@ jobs:
             echo "STATUS=failure " >> $GITHUB_ENV
           else
             echo "STATUS=success" >> $GITHUB_ENV
+          fi
       - name: Notify 
         uses: ravsamhq/notify-slack-action@v2
         with:
