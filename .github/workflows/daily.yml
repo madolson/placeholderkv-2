@@ -1083,7 +1083,7 @@ jobs:
           FAILED_JOBS=()
           NEEDS_JSON='${{ toJSON(needs) }}'
           echo $NEEDS_JSON
-          JOBS=($(echo "$NEEDS_JSON" | jq 'keys | @sh' | tr -d "'" | tr -d '"'))
+          JOBS=($(echo "$NEEDS_JSON" | jq 'keys | @sh' | tr -d '"'))
           echo "$NEEDS_JSON" | jq 'keys'
           echo "$NEEDS_JSON" | jq 'keys | @sh'
           echo $JOBS
