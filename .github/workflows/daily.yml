@@ -1092,6 +1092,7 @@ jobs:
             fi
           done
           echo $FAILED_JOBS
+          echo '${{ toJSON(github) }}'
           
           if [[ ${#FAILED_JOBS[@]} -ne 0 ]]; then
             echo "FAILED_JOBS=${FAILED_JOBS[@]}" >> $GITHUB_ENV
@@ -1104,7 +1105,7 @@ jobs:
         with:
           status: ${{ env.STATUS }}
 #          notify_when: "failure"
-          notification_title: " Daily test run <${{github.server_url}}/${{github.repository}}/actions/runs/${{github.event.workflow_run.id}}|Failure>"
+          notification_title: " Daily test run <${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}|Failure>"
           footer: "Maybe try a little harder next time?"
           message_format: ":fire: Tests failed: ${{ env.FAILED_JOBS }}"
         env:
