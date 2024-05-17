@@ -1080,22 +1080,23 @@ jobs:
     steps:
       - name: Collect job status
         run: |
-          failed_jobs=()
-          jq -c '.[]' "${{ toJSON(needs) }}" | while read i; do
-            job_name=$(echo $job | jq -r 'keys[0]')
-            job_result=$(echo $job | jq -r ".[\"$job_name\"].result")
-            
-            if [[ "$job_result" == "failure" ]]; then
-              failed_jobs+=($job_name)
+          FAILED_JOBS=()
+          NEEDS_JSON="${{ toJSON(needs) }}"
+          JOBS=($(echo "$NEEDS_JSON" | jq 'keys_unsorted' | jq @sh | tr -d "'" | tr -d '"'))
+          for JOB in $JOBS; do
+            JOB_RESULT=$(echo "$NEEDS_JSON" | jq ".[\"$JOB\"][\"result\"]" | tr -d '"')
+            echo $JOB_RESULT
+            if [ $JOB_RESULT = "failure" ]; then
+              FAILED_JOBS+=($JOB)
             fi
           done
+          echo $FAILED_JOBS
           
-          if [[ ${#failed_jobs[@]} -ne 0 ]]; then
-            echo "FAILED_JOBS=${failed_jobs[@]}" >> $GITHUB_ENV
-            echo "STATUS=failure" >> $GITHUB_ENV
+          if [[ ${#FAILED_JOBS[@]} -ne 0 ]]; then
+            echo "FAILED_JOBS=${FAILED_JOBS[@]}" >> $GITHUB_ENV
+            echo "STATUS=failure " >> $GITHUB_ENV
           else
             echo "STATUS=success" >> $GITHUB_ENV
-          fi
       - name: Notify 
         uses: ravsamhq/notify-slack-action@v2
         with:
