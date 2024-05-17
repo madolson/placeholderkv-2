@@ -1083,6 +1083,7 @@ jobs:
           FAILED_JOBS=()
           NEEDS_JSON='${{ toJSON(needs) }}'
           JOBS=($(echo "$NEEDS_JSON" | jq 'keys_unsorted' | jq @sh | tr -d "'" | tr -d '"'))
+          echo $JOBS
           for JOB in $JOBS; do
             JOB_RESULT=$(echo "$NEEDS_JSON" | jq ".[\"$JOB\"][\"result\"]" | tr -d '"')
             echo $JOB_RESULT
