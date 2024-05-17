@@ -1083,15 +1083,8 @@ jobs:
           FAILED_JOBS=()
           NEEDS_JSON='${{ toJSON(needs) }}'
           echo $NEEDS_JSON
-          JOBS=$(echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,')
-          echo $JOBS
-          JOBS=($JOBS)
-          echo $JOBS
-          echo "$NEEDS_JSON" | jq 'keys'
-          echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,'
-          echo ( $(echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,') )
-          echo $JOBS
-          for JOB in $JOBS; do
+          JOBS=($(echo "$NEEDS_JSON" | jq 'keys' | tr -d '[] ,'))
+          for JOB in ${JOBS[@]}; do
             JOB_RESULT=$(echo "$NEEDS_JSON" | jq ".[$JOB][\"result\"]" | tr -d '"')
             echo $JOB_RESULT
             if [ $JOB_RESULT = "failure" ]; then
