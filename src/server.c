@@ -4038,7 +4038,7 @@ int processCommand(client *c) {
             return C_OK;
         }
     }
-
+invalid
     /* Disconnect some clients if total clients memory is too high. We do this
      * before key eviction, after the last command was executed and consumed
      * some client output buffer memory. */
