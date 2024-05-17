@@ -1081,8 +1081,7 @@ jobs:
       - name: Collect job status
         run: |
           failed_jobs=()
-          
-          for job in "${{ toJSON(needs) }}"; do
+          jq -c '.[]' "${{ toJSON(needs) }}" | while read i; do
             job_name=$(echo $job | jq -r 'keys[0]')
             job_result=$(echo $job | jq -r ".[\"$job_name\"].result")
             
