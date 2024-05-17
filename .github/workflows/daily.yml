@@ -36,7 +36,7 @@ jobs:
   test-ubuntu-jemalloc:
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'workflow_dispatch') &&
+      (github.event_name == 'workflow_dispatch' || (github.event_name != 'workflow_dispatch')) &&
       !contains(github.event.inputs.skipjobs, 'ubuntu')
     timeout-minutes: 14400
     steps:
