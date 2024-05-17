@@ -19,6 +19,7 @@ void _serverAssert(const char *estr, const char *file, int line) {
 int runTestSuite(struct unitTestSuite *test, int argc, char **argv, int flags) {
     int test_num = 0;
     int failed_tests = 0;
+    invalid
     printf("[" KBLUE "START" KRESET "] - %s\n", test->filename);
 
     for (int id = 0; test->tests[id].proc != NULL; id++) {
