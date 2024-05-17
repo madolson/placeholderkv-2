@@ -1094,7 +1094,7 @@ jobs:
           
           if [[ ${#FAILED_JOBS[@]} -ne 0 ]]; then
             echo "FAILED_JOBS=${FAILED_JOBS[@]}" >> $GITHUB_ENV
-            echo "STATUS=failure " >> $GITHUB_ENV
+            echo "STATUS=failure" >> $GITHUB_ENV
           else
             echo "STATUS=success" >> $GITHUB_ENV
           fi
