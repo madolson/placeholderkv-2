@@ -38,12 +38,12 @@
 typedef struct aeApiState {
     int kqfd;
     struct kevent *events;
-
+#ifdef USE_KQUEUE_BATCH
     /* changes is used to buffer incoming events that will be
      * registered in bulk via kevent(2). */
     struct kevent changes[MAX_QUEUED_EVENTS];
     unsigned int num_changes;
-
+#endif
     /* Events mask for merge read and write event.
      * To reduce memory consumption, we use 2 bits to store the mask
      * of an event, so that 1 byte will store the mask of 4 events. */
@@ -82,7 +82,9 @@ static int aeApiCreate(aeEventLoop *eventLoop) {
         return -1;
     }
     anetCloexec(state->kqfd);
+#ifdef USE_KQUEUE_BATCH
     state->num_changes = 0;
+#endif
     state->eventsMask = zmalloc(EVENT_MASK_MALLOC_SIZE(eventLoop->setsize));
     memset(state->eventsMask, 0, EVENT_MASK_MALLOC_SIZE(eventLoop->setsize));
     eventLoop->apidata = state;
@@ -109,6 +111,7 @@ static void aeApiFree(aeEventLoop *eventLoop) {
 
 static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     aeApiState *state = eventLoop->apidata;
+#ifdef USE_KQUEUE_BATCH
     /* Instead of registering events to kqueue one by one, we buffer events and
      * register them at once along with retrieving pending events in aeApiPoll. */
     if (mask & AE_READABLE) {
@@ -139,11 +142,24 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
             state->num_changes = 0; /* rewind the changelist. */
         }
     }
+#else
+    struct kevent ke;
+
+    if (mask & AE_READABLE) {
+        EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        if (kevent(state->kqfd, &ke, 1, NULL, 0, NULL) == -1) return -1;
+    }
+    if (mask & AE_WRITABLE) {
+        EV_SET(&ke, fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
+        if (kevent(state->kqfd, &ke, 1, NULL, 0, NULL) == -1) return -1;
+    }
+#endif
     return 0;
 }
 
 static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
     aeApiState *state = eventLoop->apidata;
+#ifdef USE_KQUEUE_BATCH
     /* At this point, we somehow receive deletion requests for events that
      * are not registered in kqueue yet, which could causes kevent(2) to
      * fail and return ENOENT. Therefore, we need to use aeEventLoop->events
@@ -183,6 +199,18 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
             panic("aeApiDelEvent: kevent, %s", strerror(errno));
         state->num_changes = 0; /* rewind the changelist. */
     }
+#else
+    struct kevent ke;
+
+    if (mask & AE_READABLE) {
+        EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        kevent(state->kqfd, &ke, 1, NULL, 0, NULL);
+    }
+    if (mask & AE_WRITABLE) {
+        EV_SET(&ke, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+        kevent(state->kqfd, &ke, 1, NULL, 0, NULL);
+    }
+#endif
 }
 
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
@@ -195,8 +223,14 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
         ts.tv_nsec = tvp->tv_usec * 1000;
         timeout = &ts;
     }
-    retval = kevent(state->kqfd, state->changes, state->num_changes, state->events, eventLoop->setsize, timeout);
+#ifdef USE_KQUEUE_BATCH
+    retval = kevent(state->kqfd, state->changes, state->num_changes,
+                    state->events, eventLoop->setsize, timeout);
     state->num_changes = 0;
+#else
+    retval = kevent(state->kqfd, NULL, 0, state->events, eventLoop->setsize,
+                    timeout);
+#endif
 
     if (retval > 0) {
         int j;
