@@ -114,22 +114,14 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 #ifdef USE_KQUEUE_BATCH
     /* Instead of registering events to kqueue one by one, we buffer events and
      * register them at once along with retrieving pending events in aeApiPoll. */
-    if (mask & AE_READABLE) {
-        EV_SET(state->changes + state->num_changes, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-        /* The current changelist is full, register it to kqueue now and
-         * then rewind it to make room for follow-up events. */
-        if (++state->num_changes == MAX_QUEUED_EVENTS) {
-            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
-                /* An error occurs while processing an element of the changelist,
-                 * this is unexpected and indicates somewhere went wrong.
-                 * We panic for this situation directly because we won't be unable to
-                 * learn about this failure later. */
-                panic("aeApiAddEvent: kevent, %s", strerror(errno));
-            state->num_changes = 0; /* rewind the changelist. */
+    while (mask & AE_READABLE || mask & AE_WRITABLE) {
+        if (mask & AE_READABLE) {
+            mask &= ~AE_READABLE;
+            EV_SET(state->changes + state->num_changes, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+        } else if (mask & AE_WRITABLE) {
+            mask &= ~AE_WRITABLE;
+            EV_SET(state->changes + state->num_changes, fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
         }
-    }
-    if (mask & AE_WRITABLE) {
-        EV_SET(state->changes + state->num_changes, fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
         /* The current changelist is full, register it to kqueue now and
          * then rewind it to make room for follow-up events. */
         if (++state->num_changes == MAX_QUEUED_EVENTS) {
@@ -169,18 +161,14 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
 
     /* Instead of applying events to kqueue one by one, we buffer events
      * and apply them at once. */
-    if (delmask & AE_READABLE) {
-        EV_SET(state->changes + state->num_changes, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-        /* The current changelist is full, apply it to kqueue now and
-         * then rewind it to make room for follow-up events. */
-        if (++state->num_changes == MAX_QUEUED_EVENTS) {
-            if (kevent(state->kqfd, state->changes, state->num_changes, NULL, 0, NULL))
-                panic("aeApiDelEvent: kevent, %s", strerror(errno));
-            state->num_changes = 0; /* rewind the changelist. */
+    while(delmask & AE_READABLE || delmask & AE_WRITABLE) {
+        if (delmask & AE_READABLE) {
+            delmask &= ~AE_READABLE;
+            EV_SET(state->changes + state->num_changes, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        } else if (delmask & AE_WRITABLE) {
+            delmask &= ~AE_WRITABLE;
+            EV_SET(state->changes + state->num_changes, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         }
-    }
-    if (delmask & AE_WRITABLE) {
-        EV_SET(state->changes + state->num_changes, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         /* The current changelist is full, apply it to kqueue now and
          * then rewind it to make room for follow-up events. */
         if (++state->num_changes == MAX_QUEUED_EVENTS) {
