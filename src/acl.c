@@ -506,7 +506,7 @@ void ACLFreeUserAndKillClients(user *u) {
              * more defensive to set the default user and put
              * it in non authenticated mode. */
             c->user = DefaultUser;
-            c->flags &= CLIENT_AUTHENTICATED
+            c->flags &= ~CLIENT_AUTHENTICATED;
             /* We will write replies to this client later, so we can't
              * close it directly even if async. */
             if (c == server.current_client) {

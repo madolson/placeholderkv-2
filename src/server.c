@@ -2533,7 +2533,6 @@ void makeThreadKillable(void) {
 
 void initServer(void) {
     int j;
-
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
     setupSignalHandlers();

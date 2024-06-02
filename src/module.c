@@ -3733,8 +3733,8 @@ int VM_GetClientInfoById(void *ci, uint64_t id) {
 ValkeyModuleString *VM_GetClientNameById(ValkeyModuleCtx *ctx, uint64_t id) {
     client *client = lookupClientByID(id);
     if (client == NULL || client->name == NULL) return NULL;
-    robj *name = client->name;
-    incrRefCount(name);
+
+    robj *name = createStringObject(client->name, sdslen(client->name));
     autoMemoryAdd(ctx, VALKEYMODULE_AM_STRING, name);
     return name;
 }
