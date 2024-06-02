@@ -428,7 +428,7 @@ static int scriptVerifyClusterState(scriptRunCtx *run_ctx, client *c, client *or
     /* Duplicate relevant flags in the script client. */
     c->flags &= ~(CLIENT_READONLY | CLIENT_ASKING);
     c->flags |= original_c->flags & (CLIENT_READONLY | CLIENT_ASKING);
-    int hashslot = -1;
+    int16_t hashslot = -1;
     if (getNodeByQuery(c, c->cmd, c->argv, c->argc, &hashslot, &error_code) != getMyClusterNode()) {
         if (error_code == CLUSTER_REDIR_DOWN_RO_STATE) {
             *err = sdsnew("Script attempted to execute a write command while the "

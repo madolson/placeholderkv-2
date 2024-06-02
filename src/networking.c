@@ -104,14 +104,18 @@ static void clientSetDefaultAuth(client *c) {
     /* If the default user does not require authentication, the user is
      * directly authenticated. */
     c->user = DefaultUser;
-    c->authenticated = (c->user->flags & USER_FLAG_NOPASS) && !(c->user->flags & USER_FLAG_DISABLED);
+    if ((c->user->flags & USER_FLAG_NOPASS) && !(c->user->flags & USER_FLAG_DISABLED)) {
+        c->flags |= CLIENT_AUTHENTICATED;
+    } else {
+        c->flags &= ~CLIENT_AUTHENTICATED;
+    }
 }
 
 int authRequired(client *c) {
     /* Check if the user is authenticated. This check is skipped in case
      * the default user is flagged as "nopass" and is active. */
     int auth_required =
-        (!(DefaultUser->flags & USER_FLAG_NOPASS) || (DefaultUser->flags & USER_FLAG_DISABLED)) && !c->authenticated;
+        (!(DefaultUser->flags & USER_FLAG_NOPASS) || (DefaultUser->flags & USER_FLAG_DISABLED)) && !(c->flags & CLIENT_AUTHENTICATED);
     return auth_required;
 }
 
@@ -1546,7 +1550,7 @@ void clearClientConnectionState(client *c) {
     unmarkClientAsPubSub(c);
 
     if (c->name) {
-        decrRefCount(c->name);
+        zfree(c->name);
         c->name = NULL;
     }
 
@@ -1702,9 +1706,9 @@ void freeClient(client *c) {
 
     /* Release other dynamically allocated client structure fields,
      * and finally release the client structure itself. */
-    if (c->name) decrRefCount(c->name);
-    if (c->lib_name) decrRefCount(c->lib_name);
-    if (c->lib_ver) decrRefCount(c->lib_ver);
+    zfree(c->name);
+    zfree(c->lib_name);
+    zfree(c->lib_ver);
     freeClientMultiState(c);
     sdsfree(c->peerid);
     sdsfree(c->sockname);
@@ -2881,7 +2885,7 @@ sds catClientInfoString(sds s, client *client) {
         " addr=%s", getClientPeerId(client),
         " laddr=%s", getClientSockname(client),
         " %s", connGetInfo(client->conn, conninfo, sizeof(conninfo)),
-        " name=%s", client->name ? (char*)client->name->ptr : "",
+        " name=%s", client->name ? (char*)client->name : "",
         " age=%I", (long long)(commandTimeSnapshot() / 1000 - client->ctime),
         " idle=%I", (long long)(server.unixtime - client->lastinteraction),
         " flags=%s", flags,
@@ -2906,8 +2910,8 @@ sds catClientInfoString(sds s, client *client) {
         " user=%s", client->user ? client->user->name : "(superuser)",
         " redir=%I", (client->flags & CLIENT_TRACKING) ? (long long) client->client_tracking_redirection : -1,
         " resp=%i", client->resp,
-        " lib-name=%s", client->lib_name ? (char*)client->lib_name->ptr : "",
-        " lib-ver=%s", client->lib_ver ? (char*)client->lib_ver->ptr : "",
+        " lib-name=%s", client->lib_name ? (char*)client->lib_name : "",
+        " lib-ver=%s", client->lib_ver ? (char*)client->lib_ver : "",
         " tot-net-in=%U", client->net_input_bytes,
         " tot-net-out=%U", client->net_output_bytes,
         " tot-cmds=%U", client->commands_processed));
@@ -2964,16 +2968,14 @@ int clientSetName(client *c, robj *name, const char **err) {
         return C_ERR;
     }
     int len = (name != NULL) ? sdslen(name->ptr) : 0;
+    zfree(c->name);
     /* Setting the client name to an empty string actually removes
      * the current name. */
     if (len == 0) {
-        if (c->name) decrRefCount(c->name);
         c->name = NULL;
         return C_OK;
     }
-    if (c->name) decrRefCount(c->name);
-    c->name = name;
-    incrRefCount(name);
+    c->name = sdsdup(name->ptr);
     return C_OK;
 }
 
@@ -3000,7 +3002,7 @@ void clientSetinfoCommand(client *c) {
     sds attr = c->argv[2]->ptr;
     robj *valob = c->argv[3];
     sds val = valob->ptr;
-    robj **destvar = NULL;
+    sds *destvar = NULL;
     if (!strcasecmp(attr, "lib-name")) {
         destvar = &c->lib_name;
     } else if (!strcasecmp(attr, "lib-ver")) {
@@ -3014,10 +3016,9 @@ void clientSetinfoCommand(client *c) {
         addReplyErrorFormat(c, "%s cannot contain spaces, newlines or special characters.", attr);
         return;
     }
-    if (*destvar) decrRefCount(*destvar);
+    zfree(*destvar);
     if (sdslen(val)) {
-        *destvar = valob;
-        incrRefCount(valob);
+        *destvar = sdsdup(valob->ptr);
     } else
         *destvar = NULL;
     addReply(c, shared.ok);
@@ -3333,7 +3334,7 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr, "getname") && c->argc == 2) {
         /* CLIENT GETNAME */
         if (c->name)
-            addReplyBulk(c, c->name);
+            addReplyBulkCBuffer(c, c->name, sdslen(c->name));
         else
             addReplyNull(c);
     } else if (!strcasecmp(c->argv[1]->ptr, "unpause") && c->argc == 2) {
@@ -3641,7 +3642,7 @@ void helloCommand(client *c) {
     }
 
     /* At this point we need to be authenticated to continue. */
-    if (!c->authenticated) {
+    if (!(c->flags & CLIENT_AUTHENTICATED)) {
         addReplyError(c, "-NOAUTH HELLO must be called with the client already "
                          "authenticated, otherwise the HELLO <proto> AUTH <user> <pass> "
                          "option can be used to authenticate the client and "

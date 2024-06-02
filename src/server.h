@@ -427,6 +427,8 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
 #define CLIENT_MODULE_PREVENT_REPL_PROP (1ULL << 49) /* Module client do not want to propagate to replica */
 #define CLIENT_REPROCESSING_COMMAND (1ULL << 50)     /* The client is re-processing the command. */
 #define CLIENT_REPLICATION_DONE (1ULL << 51)         /* Indicate that replication has been done on the client */
+/* Indicates if the user authenticated against its user, needed when the default user requires auth. */
+#define CLIENT_AUTHENTICATED (1ULL << 52)
 
 /* Client block type (btype field in client structure)
  * if CLIENT_BLOCKED flag is set. */
@@ -1199,11 +1201,13 @@ typedef struct client {
     uint64_t id;    /* Client incremental unique ID. */
     uint64_t flags; /* Client flags: CLIENT_* macros. */
     connection *conn;
-    int resp;                            /* RESP protocol version. Can be 2 or 3. */
+    uint8_t resp : 4;                    /* RESP protocol version. Can be 2 or 3. */
+    uint8_t reqtype : 4;                 /* Request protocol type: PROTO_REQ_* */
+    int16_t slot;                        /* The slot the client is executing against. Set to -1 if no slot is being used */
     serverDb *db;                        /* Pointer to currently SELECTed DB. */
-    robj *name;                          /* As set by CLIENT SETNAME. */
-    robj *lib_name;                      /* The client library name as set by CLIENT SETINFO. */
-    robj *lib_ver;                       /* The client library version as set by CLIENT SETINFO. */
+    sds name;                            /* As set by CLIENT SETNAME. */
+    sds lib_name;                        /* The client library name as set by CLIENT SETINFO. */
+    sds lib_ver;                         /* The client library version as set by CLIENT SETINFO. */
     sds querybuf;                        /* Buffer we use to accumulate client queries. */
     size_t qb_pos;                       /* The position we have read in querybuf. */
     size_t querybuf_peak;                /* Recent (100ms or more) peak of querybuf size. */
@@ -1220,7 +1224,6 @@ typedef struct client {
     user *user;                          /* User associated with this connection. If the
                                             user is set to NULL the connection can do
                                             anything (admin). */
-    int reqtype;                         /* Request protocol type: PROTO_REQ_* */
     int multibulklen;                    /* Number of multi bulk arguments left to read. */
     long bulklen;                        /* Length of bulk argument in multi bulk request. */
     list *reply;                         /* List of reply objects to send to the client. */
@@ -1230,12 +1233,10 @@ typedef struct client {
                                             buffer or object being sent. */
     time_t ctime;                        /* Client creation time. */
     long duration;          /* Current command duration. Used for measuring latency of blocking/non-blocking cmds */
-    int slot;               /* The slot the client is executing against. Set to -1 if no slot is being used */
     dictEntry *cur_script;  /* Cached pointer to the dictEntry of the script being executed. */
     time_t lastinteraction; /* Time of the last interaction, used for timeout */
     time_t obuf_soft_limit_reached_time;
-    int authenticated;                   /* Needed when the default user requires auth. */
-    int replstate;                       /* Replication state if this is a slave. */
+    uint8_t replstate;                       /* Replication state if this is a slave. */
     int repl_start_cmd_stream_on_ack;    /* Install slave write handler on first ACK. */
     int repldbfd;                        /* Replication DB file descriptor. */
     off_t repldboff;                     /* Replication DB file offset. */

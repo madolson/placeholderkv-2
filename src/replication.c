@@ -1725,7 +1725,7 @@ void replicationCreateMasterClient(connection *conn, int dbid) {
     /* Allocate a private query buffer for the master client instead of using the shared query buffer.
      * This is done because the master's query buffer data needs to be preserved for my sub-replicas to use. */
     server.master->querybuf = sdsempty();
-    server.master->authenticated = 1;
+    server.master->flags |= CLIENT_AUTHENTICATED;
     server.master->reploff = server.master_initial_offset;
     server.master->read_reploff = server.master->reploff;
     server.master->user = NULL; /* This client can do everything. */
@@ -3305,7 +3305,7 @@ void replicationResurrectCachedMaster(connection *conn) {
     server.master->conn = conn;
     connSetPrivateData(server.master->conn, server.master);
     server.master->flags &= ~(CLIENT_CLOSE_AFTER_REPLY | CLIENT_CLOSE_ASAP);
-    server.master->authenticated = 1;
+    server.master->flags |= CLIENT_AUTHENTICATED;
     server.master->lastinteraction = server.unixtime;
     server.repl_state = REPL_STATE_CONNECTED;
     server.repl_down_since = 0;
