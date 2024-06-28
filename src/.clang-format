@@ -15,7 +15,6 @@ AllowShortLoopsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: false
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
-AlignTrailingComments: true
 PointerAlignment: Right
 KeepEmptyLinesAtTheStartOfBlocks: false
 SpaceBeforeParens: ControlStatements
