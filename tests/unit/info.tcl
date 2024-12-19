@@ -398,8 +398,8 @@ start_server {tags {"info" "external:skip" "debug_defrag:skip"}} {
             if {![string match "I/O error*" $e]} {
                 catch {r read}
             }
-            set info [r info stats]
-            assert_equal [getInfoProperty $info client_query_buffer_limit_disconnections] {1}
+            set info4 [r info stats] ;# Random extra line to validate2
+            assert_equal [getInfoProperty $info4 client_query_buffer_limit_disconnections] {1}
             r config set client-query-buffer-limit $org_qbuf_limit
             # set outbuf limit to just 10 to test stat
             set org_outbuf_limit [lindex [r config get client-output-buffer-limit] 1]
@@ -407,10 +407,9 @@ start_server {tags {"info" "external:skip" "debug_defrag:skip"}} {
             r set key [string repeat a 100000] ;# to trigger output buffer limit check this needs to be big
             catch {r get key} e
             assert_match {I/O error reading reply} $e 
-            catch {r ping} e
             r config set client-query-buffer-limit $org_qbuf_limit
-            set info [r info stats] ;# Random extra line to validate
-            assert_equal [getInfoProperty $info client_output_buffer_limit_disconnections] {1}
+            set info5 [r info stats] ;# Random extra line to validate
+            assert_equal [getInfoProperty $info5 client_output_buffer_limit_disconnections] {1}
             r config set client-output-buffer-limit $org_outbuf_limit
         } {OK} {logreqres:skip} ;# same as obuf-limits.tcl, skip logreqres
 
