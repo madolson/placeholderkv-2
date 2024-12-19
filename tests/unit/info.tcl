@@ -406,8 +406,10 @@ start_server {tags {"info" "external:skip" "debug_defrag:skip"}} {
             r config set client-output-buffer-limit "normal 10 0 0"
             r set key [string repeat a 100000] ;# to trigger output buffer limit check this needs to be big
             catch {r get key} e
-            assert_match {I/O error reading reply} $e 
+            assert_match {I/O error reading reply} $e
+            puts $e
             r config set client-query-buffer-limit $org_qbuf_limit
+            puts [r info]
             set info5 [r info stats] ;# Random extra line to validate
             assert_equal [getInfoProperty $info5 client_output_buffer_limit_disconnections] {1}
             r config set client-output-buffer-limit $org_outbuf_limit
