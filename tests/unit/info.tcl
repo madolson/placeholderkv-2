@@ -408,7 +408,7 @@ start_server {tags {"info" "external:skip" "debug_defrag:skip"}} {
             catch {r get key} e
             assert_match {I/O error reading reply} $e
             puts $e
-            r config set client-query-buffer-limit $org_qbuf_limit
+            r config set client-output-buffer-limit "normal 0 0 0"
             puts [r info]
             set info5 [r info stats] ;# Random extra line to validate
             assert_equal [getInfoProperty $info5 client_output_buffer_limit_disconnections] {1}
