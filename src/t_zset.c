@@ -86,6 +86,8 @@ static inline void zslSetNodeSpanAtLevel(zskiplistNode *x, int level, unsigned l
         x->level[level].span = span;
 }
 
+
+
 static inline void zslIncrNodeSpanAtLevel(zskiplistNode *x, int level, unsigned long incr) {
     /* We use the level 0 span in order to hold the node height, so we avoid overriding it. */
     if (level > 0)
@@ -284,6 +286,7 @@ int zslDelete(zskiplist *zsl, double score, sds ele, zskiplistNode **node) {
     }
     return 0; /* not found */
 }
+
 
 /* Update the score of an element inside the sorted set skiplist.
  * Note that the element must exist and must match 'score'.
@@ -3839,9 +3842,9 @@ void zscanCommand(client *c) {
     robj *o;
     unsigned long long cursor;
 
-    if (parseScanCursorOrReply(c, c->argv[2], &cursor) == C_ERR) return;
+    if (parseScanCursorOrReply(c, c->argv[2]->ptr, &cursor) == C_ERR) return;
     if ((o = lookupKeyReadOrReply(c, c->argv[1], shared.emptyscan)) == NULL || checkType(c, o, OBJ_ZSET)) return;
-    scanGenericCommand(c, o, cursor);
+    scanGenericCommand(c, o, cursor, -1);
 }
 
 /* This command implements the generic zpop operation, used by:

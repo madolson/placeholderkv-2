@@ -29,6 +29,7 @@
 
 #include "server.h"
 #include "cluster.h"
+#include "crc16_slottable.h"
 #include "latency.h"
 #include "script.h"
 #include "functions.h"
@@ -1043,8 +1044,8 @@ void hashtableScanCallback(void *privdata, void *entry) {
  * if the cursor is valid, store it as unsigned integer into *cursor and
  * returns C_OK. Otherwise return C_ERR and send an error to the
  * client. */
-int parseScanCursorOrReply(client *c, robj *o, unsigned long long *cursor) {
-    if (!string2ull(o->ptr, cursor)) {
+int parseScanCursorOrReply(client *c, sds o, unsigned long long *cursor) {
+    if (!string2ull(o, cursor)) {
         addReplyError(c, "invalid cursor");
         return C_ERR;
     }
@@ -1094,7 +1095,7 @@ char *getObjectTypeName(robj *o) {
  *
  * In the case of a Hash object the function returns both the field and value
  * of every element on the Hash. */
-void scanGenericCommand(client *c, robj *o, unsigned long long cursor) {
+void scanGenericCommand(client *c, robj *o, unsigned long long cursor, int cursor_slot) {
     int i, j;
     listNode *node;
     long count = 10;
@@ -1102,6 +1103,7 @@ void scanGenericCommand(client *c, robj *o, unsigned long long cursor) {
     sds typename = NULL;
     long long type = LLONG_MAX;
     int patlen = 0, use_pattern = 0, only_keys = 0;
+    int onlydidx = -1;
 
     /* Object must be NULL (to iterate keys names), or the type of the object
      * must be Set, Sorted Set, or Hash. */
@@ -1156,10 +1158,33 @@ void scanGenericCommand(client *c, robj *o, unsigned long long cursor) {
             }
             only_keys = 1;
             i++;
+        } else if (!o && !strcasecmp(c->argv[i]->ptr, "slot") && j >= 2 && onlydidx == -1) {
+            if (!server.cluster_enabled) {
+                addReplyError(c, "SLOT option can only be used in cluster mode");
+                return;
+            }
+            if ((onlydidx = getSlotOrReply(c, c->argv[i + 1])) == -1) {
+                return;
+            }
+            i += 2;
         } else {
             addReplyErrorObject(c, shared.syntaxerr);
             return;
         }
+    }
+
+
+    /* A pattern may restrict all matching keys to one cluster slot. */
+    if (o == NULL && use_pattern && server.cluster_enabled) {
+        int patternidx = patternHashSlot(pat, patlen);
+        if (onlydidx != -1 && onlydidx != patternidx) {
+            addReplyError(c, "Pattern and slot don't match");
+            return;
+        }
+        onlydidx = patternidx;
+    }
+    if (cursor_slot != -1) {
+        onlydidx = cursor_slot;
     }
 
     /* Step 2: Iterate the collection.
@@ -1228,11 +1253,6 @@ void scanGenericCommand(client *c, robj *o, unsigned long long cursor) {
             .only_keys = only_keys,
         };
 
-        /* A pattern may restrict all matching keys to one cluster slot. */
-        int onlydidx = -1;
-        if (o == NULL && use_pattern && server.cluster_enabled) {
-            onlydidx = patternHashSlot(pat, patlen);
-        }
         do {
             /* In cluster mode there is a separate dictionary for each slot.
              * If cursor is empty, we should try exploring next non-empty slot. */
@@ -1293,7 +1313,19 @@ void scanGenericCommand(client *c, robj *o, unsigned long long cursor) {
 
     /* Step 3: Reply to the client. */
     addReplyArrayLen(c, 2);
-    addReplyBulkLongLong(c, cursor);
+    if (cursor_slot != -1) {
+        if (cursor == 0) {
+            cursor_slot++;
+        }
+        if (cursor_slot == 16384) {
+            addReplyBulkCString(c, "0-0");
+        } else {
+            sds cluster_cursor = sdscatfmt(sdsempty(), "{%s}-%i", crc16_slot_table[cursor_slot], cursor);
+            addReplyBulkSds(c, cluster_cursor);
+        }
+    } else {
+        addReplyBulkLongLong(c, cursor);
+    }
 
     addReplyArrayLen(c, listLength(keys));
     while ((node = listFirst(keys)) != NULL) {
@@ -1305,11 +1337,38 @@ void scanGenericCommand(client *c, robj *o, unsigned long long cursor) {
     listRelease(keys);
 }
 
+void clusterscanCommand(client *c) {
+    int argc;
+    sds cursor_arg = c->argv[1]->ptr;
+    unsigned long long cursor;
+    if (!strcmp(cursor_arg, "0-0")) {
+        addReplyArrayLen(c, 2);
+        sds cluster_cursor = sdscatfmt(sdsempty(), "{%s}-%i", crc16_slot_table[0], 0);
+        addReplyBulkSds(c, cluster_cursor);
+        addReplyArrayLen(c, 0);
+        return;
+    }
+
+    sds *cursor_components = sdssplitlen((char *)cursor_arg, sdslen(cursor_arg), "-", 1, &argc);
+    if (argc != 2) {
+        addReplyError(c, "Invalid cursor");
+        sdsfreesplitres(cursor_components, argc);
+        return;
+    }
+    if (parseScanCursorOrReply(c, cursor_components[1], &cursor) == C_ERR) {
+        sdsfreesplitres(cursor_components, argc);
+        return;
+    }
+
+    sdsfreesplitres(cursor_components, argc);
+    scanGenericCommand(c, NULL, cursor, c->slot);
+}
+
 /* The SCAN command completely relies on scanGenericCommand. */
 void scanCommand(client *c) {
     unsigned long long cursor;
-    if (parseScanCursorOrReply(c, c->argv[1], &cursor) == C_ERR) return;
-    scanGenericCommand(c, NULL, cursor);
+    if (parseScanCursorOrReply(c, c->argv[1]->ptr, &cursor) == C_ERR) return;
+    scanGenericCommand(c, NULL, cursor, -1);
 }
 
 void dbsizeCommand(client *c) {
