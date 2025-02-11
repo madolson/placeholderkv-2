@@ -71,19 +71,22 @@ class Request(object):
         self.command = None
         self.schema = None
         self.argv = []
-
         while True:
-            line = f.readline()
-            line_counter[0] += 1
-            if not line:
-                break
-            length = int(line)
-            arg = str(f.read(length))
-            f.read(2)  # read \r\n
-            line_counter[0] += 1
-            if arg == "__argv_end__":
-                break
-            self.argv.append(arg)
+            try:
+                line = f.readline()
+                line_counter[0] += 1
+                if not line:
+                    break
+                length = int(line)
+                arg = str(f.read(length))
+                f.read(2)  # read \r\n
+                line_counter[0] += 1
+                if arg == "__argv_end__":
+                    break
+                self.argv.append(arg)
+            except Exception as e:
+                print(f"Encountered malformed reply, printing previous lines: {self.argv}")
+                raise
 
         if not self.argv:
             return
