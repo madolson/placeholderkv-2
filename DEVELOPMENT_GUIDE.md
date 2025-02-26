@@ -34,11 +34,12 @@ There isn't a well defined test for what is considered a material change, but a 
 Valkey uses two types of tests: unit and integration tests.
 All contributions should include a test of some form. 
 
-Unit tests are present in the src/unit directory, and are intended to test individual structures or files.
+Unit tests are present in the `src/unit` directory, and are intended to test individual structures or files.
 For example, most changes to datastructures should include corresponding unit tests.
 
-Integration tests are located in the tst/ directory, and are intended to test end-to-end functionality.
+Integration tests are located in the `tests/` directory, and are intended to test end-to-end functionality.
 Adding new commands should come with corresponding integration tests.
+When writing cluster mode tests, do not use the legacy `tests/cluster` framework, which has been deprecated.
 
 ## Best practices
 1. Avoid adding configuration when a feature can be fully controlled by heuristics. 
